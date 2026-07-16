@@ -35,10 +35,44 @@ public interface IUpdateCheckService
 
 public interface IGameLauncher
 {
-    Task LaunchAsync(string thcrapDirectory, string runConfigurationPath, string gameId, CancellationToken cancellationToken = default);
+    Task<GameLaunchResult> LaunchAsync(
+        string thcrapDirectory,
+        string runConfigurationPath,
+        string gameId,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IPatchApplicationVerifier
+{
+    Task<PatchVerificationResult> VerifyAsync(
+        PatchVerificationRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record UpdateCheckResult(bool IsConfigured, bool IsUpdateAvailable, string Summary, Uri? ReleaseUri);
+
+public sealed record GameLaunchResult(int ProcessId, DateTimeOffset StartedAtUtc, string LoaderPath);
+
+public sealed record PatchVerificationRequest(
+    string ThcrapDirectory,
+    string RunConfigurationPath,
+    string PatchDirectory,
+    IReadOnlyList<string> ExpectedVirtualPaths,
+    DateTimeOffset NotBeforeUtc,
+    TimeSpan Timeout);
+
+public sealed record PatchVerificationResult(
+    bool Success,
+    bool RunConfigurationLoaded,
+    bool PatchStackLoaded,
+    int ResolvedFileCount,
+    int ExpectedFileCount,
+    string? LogPath,
+    IReadOnlyList<string> MissingVirtualPaths,
+    IReadOnlyList<string> Diagnostics)
+{
+    public bool AllExpectedFilesResolved => ResolvedFileCount == ExpectedFileCount;
+}
 
 public sealed record ExtractionResult(
     bool Success,

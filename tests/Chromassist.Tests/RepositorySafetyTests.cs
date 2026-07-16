@@ -25,7 +25,7 @@ public sealed class RepositorySafetyTests
     private static string FindRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null && !File.Exists(Path.Combine(current.FullName, "TouhouChromassist.sln")))
+        while (current is not null && !File.Exists(Path.Combine(current.FullName, "ThChromassist.sln")))
         {
             current = current.Parent;
         }

@@ -22,8 +22,9 @@ This boundary allows a future Avalonia, WinUI, or web front end to reuse the Cor
 3. Inspect the installed thcrap version and Korean patch stack.
 4. Run allowlisted `thdat` and `thanm` binaries into a private temporary directory.
 5. Decode RGBA8 PNG, transform only RGB where alpha is nonzero, then verify dimensions, alpha, and fully transparent pixels.
-6. Write a local patch under `thcrap/repos/local/` and create a new run configuration. Never edit `thpatch-ko.js`.
-7. Launch `thcrap.exe <generated-config> th18` only after the user presses the final button.
+6. Write an app-owned local repository, `repo.js`, and patch under `thcrap/repos/chromassist/`, then create a new run configuration. Never edit `thpatch-ko.js`.
+7. Launch `bin/thcrap_loader.exe <generated-config> th18` only after the user presses the final button.
+8. Watch newly written thcrap logs. First confirm that the generated run configuration and local patch archive entered the runtime stack; if gameplay requests the target assets, separately report how many of the six expected texture paths resolved from the local patch directory.
 
 ## Fail-closed rules
 

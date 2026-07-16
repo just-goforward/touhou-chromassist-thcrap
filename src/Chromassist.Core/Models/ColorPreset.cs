@@ -8,6 +8,7 @@ public sealed record ColorPreset(
     double PrimaryHueShiftDegrees,
     double SecondaryHueShiftDegrees,
     double ChromaScale,
+    double StrengthPercent,
     string ValidationStatus,
     string AlgorithmVersion)
 {

@@ -32,8 +32,9 @@ public sealed class LocalPatchBuilder : IPatchBuilder
         }
 
         var thcrapDirectory = Path.GetFullPath(validation.Installation.ThcrapDirectory);
-        var patchId = $"chromassist-th18-{SanitizeId(preset.Id)}";
-        var patchDirectory = Path.Combine(thcrapDirectory, "repos", "local", patchId);
+        var repositoryDirectory = Path.Combine(thcrapDirectory, "repos", "chromassist");
+        var patchId = $"th18-{SanitizeId(preset.Id)}";
+        var patchDirectory = Path.Combine(repositoryDirectory, patchId);
         var temporaryDirectory = patchDirectory + $".tmp-{Guid.NewGuid():N}";
         var backupDirectory = patchDirectory + $".backup-{Guid.NewGuid():N}";
         var diagnostics = new List<string>();
@@ -71,6 +72,7 @@ public sealed class LocalPatchBuilder : IPatchBuilder
 
             await WriteMetadataAsync(temporaryDirectory, patchId, validation, preset, records, cancellationToken).ConfigureAwait(false);
             CommitDirectory(temporaryDirectory, patchDirectory, backupDirectory);
+            WriteRepositoryMetadata(repositoryDirectory);
             runConfigurationPath = WriteRunConfiguration(validation, patchId, preset.Id);
             diagnostics.Add($"{records.Count}개 texture를 변환하고 로컬 thcrap patch를 생성했습니다.");
             diagnostics.Add("원본 thpatch-ko.js는 변경하지 않았습니다.");
@@ -99,7 +101,7 @@ public sealed class LocalPatchBuilder : IPatchBuilder
         var patch = new
         {
             id = patchId,
-            title = $"Touhou Chromassist local palette: {preset.DisplayName}",
+            title = $"TH Chromassist local palette: {preset.DisplayName}",
             update = false,
             dependencies = new[] { "nmlgc/base_tsa" },
             supported_games = new[] { "th18" }
@@ -121,6 +123,7 @@ public sealed class LocalPatchBuilder : IPatchBuilder
                 preset.PrimaryHueShiftDegrees,
                 preset.SecondaryHueShiftDegrees,
                 preset.ChromaScale,
+                preset.StrengthPercent,
                 user_modified = false
             },
             fairness = new
@@ -154,7 +157,7 @@ public sealed class LocalPatchBuilder : IPatchBuilder
             ?? throw new InvalidDataException("thcrap run configuration has no patches array.");
         patches.Add(new JsonObject
         {
-            ["archive"] = $"repos/local/{patchId}/",
+            ["archive"] = $"repos/chromassist/{patchId}/",
             ["update"] = false
         });
 
@@ -164,6 +167,41 @@ public sealed class LocalPatchBuilder : IPatchBuilder
         File.WriteAllText(temporaryPath, root.ToJsonString(JsonOptions));
         File.Move(temporaryPath, outputPath, overwrite: true);
         return outputPath;
+    }
+
+    private static void WriteRepositoryMetadata(string repositoryDirectory)
+    {
+        Directory.CreateDirectory(repositoryDirectory);
+        var patches = new JsonObject();
+        foreach (var directory in Directory.EnumerateDirectories(repositoryDirectory).OrderBy(static path => path, StringComparer.Ordinal))
+        {
+            var patchMetadataPath = Path.Combine(directory, "patch.js");
+            if (!File.Exists(patchMetadataPath))
+            {
+                continue;
+            }
+
+            var metadata = JsonNode.Parse(File.ReadAllText(patchMetadataPath))?.AsObject();
+            var id = metadata?["id"]?.GetValue<string>();
+            var title = metadata?["title"]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(title))
+            {
+                patches[id] = title;
+            }
+        }
+
+        var repository = new JsonObject
+        {
+            ["contact"] = "https://github.com/just-goforward/th-chromassist/issues",
+            ["id"] = "chromassist",
+            ["patches"] = patches,
+            ["servers"] = new JsonArray(),
+            ["title"] = "TH Chromassist (local)"
+        };
+        var outputPath = Path.Combine(repositoryDirectory, "repo.js");
+        var temporaryPath = outputPath + $".tmp-{Guid.NewGuid():N}";
+        File.WriteAllText(temporaryPath, repository.ToJsonString(JsonOptions));
+        File.Move(temporaryPath, outputPath, overwrite: true);
     }
 
     private static void CommitDirectory(string temporaryDirectory, string patchDirectory, string backupDirectory)

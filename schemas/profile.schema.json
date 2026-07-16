@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/touhou-chromassist/profile.schema.json",
-  "title": "Touhou Chromassist profile",
+  "$id": "https://example.invalid/th-chromassist/profile.schema.json",
+  "title": "TH Chromassist profile",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "vision", "game", "palette", "fairness", "created_at_utc", "algorithm_version"],

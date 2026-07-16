@@ -17,7 +17,7 @@ public partial class App : Application
 
         var localData = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TouhouChromassist");
+            "ThChromassist");
         var tools = Path.Combine(AppContext.BaseDirectory, "tools", "thtk");
         var locator = new Th18GameLocator();
         var validator = new Th18GameValidator(new ThcrapInspector());
@@ -28,6 +28,7 @@ public partial class App : Application
             extractor,
             new LocalPatchBuilder(),
             new ThcrapGameLauncher(),
+            new ThcrapPatchVerifier(),
             new ExecutablePicker(),
             new UserNotificationService());
 

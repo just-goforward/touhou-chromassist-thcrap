@@ -53,15 +53,23 @@ public sealed class ThcrapTests
         var result = await new LocalPatchBuilder().BuildAsync(
             validation,
             extraction,
-            PresetCatalog.All.Single(preset => preset.Id == "protan-standard"));
+            PresetCatalog.Create(PresetKind.Protan, 50));
 
         Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
         Assert.Equal(sourceConfig, await File.ReadAllTextAsync(inspector.RunConfigurationPath!));
         Assert.True(File.Exists(Path.Combine(result.PatchDirectory!, "patch.js")));
         Assert.True(File.Exists(Path.Combine(result.PatchDirectory!, "manifest.json")));
         Assert.True(File.Exists(Path.Combine(result.PatchDirectory!, "th18", "bullet1@bullet@0.png")));
+        var repositoryPath = Path.Combine(installation.ThcrapDirectory!, "repos", "chromassist", "repo.js");
+        Assert.True(File.Exists(repositoryPath));
+        using var repository = JsonDocument.Parse(await File.ReadAllTextAsync(repositoryPath));
+        Assert.Equal("TH Chromassist (local)", repository.RootElement.GetProperty("title").GetString());
+        Assert.True(repository.RootElement.GetProperty("patches").TryGetProperty("th18-protan-custom", out _));
         using var generatedConfig = JsonDocument.Parse(await File.ReadAllTextAsync(result.RunConfigurationPath!));
         Assert.Equal(5, generatedConfig.RootElement.GetProperty("patches").GetArrayLength());
+        Assert.Equal(
+            "repos/chromassist/th18-protan-custom/",
+            generatedConfig.RootElement.GetProperty("patches")[4].GetProperty("archive").GetString());
         Assert.True(result.Files.Single().AlphaPreserved);
         Assert.True(result.Files.Single().TransparentPixelsPreserved);
     }
@@ -71,9 +79,10 @@ public sealed class ThcrapTests
         var thcrap = Path.Combine(root, "thcrap");
         Directory.CreateDirectory(Path.Combine(thcrap, "config"));
         Directory.CreateDirectory(Path.Combine(thcrap, "logs"));
+        Directory.CreateDirectory(Path.Combine(thcrap, "bin"));
         File.WriteAllBytes(Path.Combine(root, "th18.exe"), [1]);
         File.WriteAllBytes(Path.Combine(root, "th18.dat"), [2]);
-        File.WriteAllBytes(Path.Combine(thcrap, "thcrap.exe"), [3]);
+        File.WriteAllBytes(Path.Combine(thcrap, "bin", "thcrap_loader.exe"), [3]);
         File.WriteAllText(Path.Combine(thcrap, "logs", "thcrap_log.txt"), "Branch: stable\nVersion: 2025-12-02\n");
         File.WriteAllText(Path.Combine(thcrap, "config", "thpatch-ko.js"), """
             {

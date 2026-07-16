@@ -1,6 +1,6 @@
 # Calibration and preset selection
 
-The simplified launcher MVP does not run a diagnostic or screening test. A user directly chooses a broad Protan, Deutan, or Tritan preset and can switch presets while comparing the original and adjusted local bullet texture.
+The simplified launcher MVP does not run a diagnostic or screening test. A user directly chooses a broad Protan, Deutan, or Tritan type with radio buttons, then adjusts an experimental 0–100% strength while comparing the original and adjusted local bullet texture in real time.
 
 Before a future screening or manual-calibration flow begins, the UI must recommend:
 

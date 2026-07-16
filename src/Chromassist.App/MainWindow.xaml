@@ -6,128 +6,215 @@
         xmlns:local="clr-namespace:Chromassist.App"
         mc:Ignorable="d"
         Title="{Binding AppTitle}"
-        Height="720"
-        Width="920"
-        MinHeight="620"
-        MinWidth="760"
+        Height="680"
+        Width="860"
+        MinHeight="600"
+        MinWidth="740"
         WindowStartupLocation="CenterScreen"
-        Background="#FFF6F7F9">
+        Background="#FFF4F6F9">
     <Window.Resources>
         <local:ByteArrayToImageSourceConverter x:Key="ImageConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
         <Style TargetType="Button">
-            <Setter Property="Padding" Value="14,8" />
-            <Setter Property="Margin" Value="0,0,8,0" />
-            <Setter Property="MinHeight" Value="38" />
+            <Setter Property="Padding" Value="18,9" />
+            <Setter Property="MinHeight" Value="40" />
         </Style>
-        <Style TargetType="ComboBox">
-            <Setter Property="MinHeight" Value="38" />
-            <Setter Property="Padding" Value="8,5" />
+        <Style TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="FontSize" Value="15" />
         </Style>
     </Window.Resources>
 
-    <Grid Margin="28">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,22">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition Width="110" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="{Binding AppTitle}" FontSize="28" FontWeight="SemiBold" Foreground="#FF20242B" />
-                <TextBlock Text="{Binding Subtitle}" Margin="0,5,0,0" FontSize="14" Foreground="#FF646B76" />
-            </StackPanel>
-            <ComboBox Grid.Column="1"
-                      ItemsSource="{Binding Languages}"
-                      SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
-                      VerticalAlignment="Center"
-                      AutomationProperties.Name="Interface language" />
-        </Grid>
-
-        <Border Grid.Row="1" Background="White" BorderBrush="#FFDDE1E7" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,14">
-            <StackPanel>
-                <TextBlock Text="{Binding GameSection}" FontSize="17" FontWeight="SemiBold" />
-                <ComboBox ItemsSource="{Binding Games}"
-                          SelectedItem="{Binding SelectedGame, Mode=TwoWay}"
-                          DisplayMemberPath="DisplayName"
-                          Margin="0,12,0,8"
-                          AutomationProperties.Name="Detected games" />
-                <TextBlock Text="{Binding SelectedGame.StatusText}" Foreground="#FF565D68" TextWrapping="Wrap" Margin="0,0,0,12" />
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="{Binding RescanLabel}" Command="{Binding ScanCommand}" />
-                    <Button Content="{Binding BrowseLabel}" Command="{Binding BrowseCommand}" />
-                </StackPanel>
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="2" Background="White" BorderBrush="#FFDDE1E7" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,14">
+        <Border Grid.Row="0" Background="White" BorderBrush="#FFDDE2E9" BorderThickness="0,0,0,1" Padding="28,22">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="220" />
-                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="110" />
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="{Binding PresetSection}" FontSize="17" FontWeight="SemiBold" />
-                    <ComboBox ItemsSource="{Binding Presets}"
-                              SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
-                              DisplayMemberPath="DisplayName"
-                              Margin="0,12,0,0"
-                              AutomationProperties.Name="Colour vision preset" />
+                    <TextBlock Text="{Binding AppTitle}" FontSize="26" FontWeight="SemiBold" Foreground="#FF20242B" />
+                    <TextBlock Text="{Binding Subtitle}" Margin="0,4,0,0" Foreground="#FF646B76" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Margin="24,0,0,0" VerticalAlignment="Bottom">
-                    <TextBlock Text="{Binding SelectedPreset.Description}" TextWrapping="Wrap" Foreground="#FF404650" />
-                    <TextBlock Text="{Binding ExperimentalNotice}" TextWrapping="Wrap" Margin="0,7,0,0" Foreground="#FF8A4B14" />
-                </StackPanel>
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding Languages}"
+                          SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          MinHeight="36"
+                          Padding="8,4"
+                          AutomationProperties.Name="Interface language" />
             </Grid>
         </Border>
 
-        <Border Grid.Row="3" Background="White" BorderBrush="#FFDDE1E7" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,14">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <TextBlock Text="{Binding PreviewSection}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12" />
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition />
-                        <ColumnDefinition Width="18" />
-                        <ColumnDefinition />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="{Binding OriginalLabel}" HorizontalAlignment="Center" Margin="0,0,0,7" />
-                    <TextBlock Grid.Column="2" Text="{Binding AdjustedLabel}" HorizontalAlignment="Center" Margin="0,0,0,7" />
-                    <Border Grid.Row="1" Background="#FF2E3138" CornerRadius="4" Padding="8">
-                        <Image Source="{Binding OriginalPreview, Converter={StaticResource ImageConverter}}" Stretch="Uniform" SnapsToDevicePixels="True" />
-                    </Border>
-                    <Border Grid.Row="1" Grid.Column="2" Background="#FF2E3138" CornerRadius="4" Padding="8">
-                        <Image Source="{Binding AdjustedPreview, Converter={StaticResource ImageConverter}}" Stretch="Uniform" SnapsToDevicePixels="True" />
-                    </Border>
+        <Grid Grid.Row="1" Margin="34,24,34,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding CurrentStepTitle}" FontSize="23" FontWeight="SemiBold" Foreground="#FF20242B" />
+                    <TextBlock Text="{Binding CurrentStepDescription}" Margin="0,5,0,0" Foreground="#FF5C6470" TextWrapping="Wrap" />
+                </StackPanel>
+                <Border Grid.Column="1" Background="#FFE8EDF5" CornerRadius="14" Padding="12,5" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding StepProgressText}" FontWeight="SemiBold" Foreground="#FF3D526F" />
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="1" Background="White" BorderBrush="#FFDDE2E9" BorderThickness="1" CornerRadius="10" Padding="26">
+                <Grid>
+                    <StackPanel Visibility="{Binding IsGameStep, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Text="TH18" FontSize="16" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding Games}"
+                                  SelectedItem="{Binding SelectedGame, Mode=TwoWay}"
+                                  DisplayMemberPath="DisplayName"
+                                  Margin="0,12,0,10"
+                                  MinHeight="40"
+                                  Padding="8,5"
+                                  AutomationProperties.Name="Detected games" />
+                        <Border Background="#FFF3F5F8" CornerRadius="6" Padding="14" Margin="0,0,0,18">
+                            <StackPanel>
+                                <TextBlock Text="{Binding SelectedGame.StatusText}" TextWrapping="Wrap" Foreground="#FF3F4650" />
+                                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="#FF5C6470" />
+                            </StackPanel>
+                        </Border>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="{Binding RescanLabel}" Command="{Binding ScanCommand}" Margin="0,0,10,0" />
+                            <Button Content="{Binding BrowseLabel}" Command="{Binding BrowseCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding IsVisionStep, Converter={StaticResource BooleanToVisibility}}">
+                        <RadioButton GroupName="VisionType" IsChecked="{Binding IsProtanSelected, Mode=TwoWay}">
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="{Binding ProtanLabel}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding ProtanDescription}" Margin="0,3,0,0" FontSize="13" Foreground="#FF616A76" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton GroupName="VisionType" IsChecked="{Binding IsDeutanSelected, Mode=TwoWay}">
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="{Binding DeutanLabel}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding DeutanDescription}" Margin="0,3,0,0" FontSize="13" Foreground="#FF616A76" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton GroupName="VisionType" IsChecked="{Binding IsTritanSelected, Mode=TwoWay}">
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="{Binding TritanLabel}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding TritanDescription}" Margin="0,3,0,0" FontSize="13" Foreground="#FF616A76" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </RadioButton>
+                        <Border Background="#FFFFF5E8" BorderBrush="#FFF2D1A5" BorderThickness="1" CornerRadius="6" Padding="13" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding ExperimentalNotice}" TextWrapping="Wrap" Foreground="#FF7A4818" />
+                        </Border>
+                    </StackPanel>
+
+                    <Grid Visibility="{Binding IsStrengthStep, Converter={StaticResource BooleanToVisibility}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding StrengthLabel}" FontSize="16" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="1" Text="{Binding StrengthDisplay}" FontSize="18" FontWeight="SemiBold" />
+                            </Grid>
+                            <Slider Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="False"
+                                    Value="{Binding StrengthPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=25}"
+                                    Margin="0,10,0,3" AutomationProperties.Name="Correction strength" />
+                            <Grid>
+                                <TextBlock Text="{Binding StrengthLowLabel}" Foreground="#FF68717C" />
+                                <TextBlock Text="{Binding StrengthHighLabel}" HorizontalAlignment="Right" Foreground="#FF68717C" />
+                            </Grid>
+                        </StackPanel>
+                        <Grid Grid.Row="1" Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="{Binding OriginalLabel}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <TextBlock Grid.Column="2" Text="{Binding AdjustedLabel}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                            <Border Grid.Row="1" Background="#FF2E3138" CornerRadius="5" Padding="8" MinHeight="200">
+                                <Image Source="{Binding OriginalPreview, Converter={StaticResource ImageConverter}}" Stretch="Uniform" SnapsToDevicePixels="True" />
+                            </Border>
+                            <Border Grid.Row="1" Grid.Column="2" Background="#FF2E3138" CornerRadius="5" Padding="8" MinHeight="200">
+                                <Image Source="{Binding AdjustedPreview, Converter={StaticResource ImageConverter}}" Stretch="Uniform" SnapsToDevicePixels="True" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+
+                    <Grid Visibility="{Binding IsApplyStep, Converter={StaticResource BooleanToVisibility}}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="{Binding GameSummaryLabel}" FontWeight="SemiBold" Margin="0,0,0,12" />
+                            <TextBlock Grid.Column="1" Text="{Binding SelectedGame.DisplayName}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                            <TextBlock Grid.Row="1" Text="{Binding VisionSummaryLabel}" FontWeight="SemiBold" Margin="0,0,0,12" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedVisionTypeLabel}" Margin="0,0,0,12" />
+                            <TextBlock Grid.Row="2" Text="{Binding StrengthSummaryLabel}" FontWeight="SemiBold" Margin="0,0,0,12" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StrengthDisplay}" Margin="0,0,0,12" />
+                            <TextBlock Grid.Row="3" Text="{Binding ConfigSummaryLabel}" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DisplayedConfigurationName}" TextWrapping="Wrap" />
+                        </Grid>
+                        <Border Grid.Row="1" Background="#FFF3F5F8" BorderBrush="#FFDDE2E9" BorderThickness="1" CornerRadius="7" Padding="16" Margin="0,24,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{Binding VerificationHeadline}" FontSize="16" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding VerificationDetails}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#FF505966" />
+                                <TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#FF68717C" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#FFDDE2E9" BorderThickness="0,1,0,0" Padding="28,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Content="{Binding BackLabel}" Command="{Binding BackCommand}" MinWidth="92" />
+                <ProgressBar Grid.Column="1" IsIndeterminate="True" Height="4" Margin="24,0" VerticalAlignment="Center"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}" />
+                <Button Grid.Column="2" Content="{Binding NextLabel}" Command="{Binding NextCommand}" MinWidth="92"
+                        Visibility="{Binding IsNotApplyStep, Converter={StaticResource BooleanToVisibility}}" />
+                <Button Grid.Column="2" Content="{Binding ApplyLaunchLabel}" Command="{Binding ApplyAndLaunchCommand}" MinWidth="190" FontWeight="SemiBold"
+                        Visibility="{Binding IsApplyStep, Converter={StaticResource BooleanToVisibility}}" />
             </Grid>
         </Border>
-
-        <Grid Grid.Row="4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#FF4C535E" Margin="0,0,18,0" />
-            <Button Grid.Column="1"
-                    Content="{Binding ApplyLaunchLabel}"
-                    Command="{Binding ApplyAndLaunchCommand}"
-                    Padding="20,10"
-                    FontWeight="SemiBold"
-                    AutomationProperties.Name="Apply patch and launch game" />
-        </Grid>
     </Grid>
 </Window>

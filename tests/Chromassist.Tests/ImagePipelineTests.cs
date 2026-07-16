@@ -24,7 +24,7 @@ public sealed class ImagePipelineTests
     public void PresetTransformationPreservesProtectedInvariants()
     {
         var source = CreateFixture();
-        var transformed = PresetTransformer.Transform(source, PresetCatalog.All.Single(preset => preset.Id == "deutan-standard"));
+        var transformed = PresetTransformer.Transform(source, PresetCatalog.Create(Chromassist.Core.Models.PresetKind.Deutan, 50));
         var invariant = ImageInvariantChecker.Compare(source, transformed);
 
         Assert.True(invariant.Success);
@@ -37,9 +37,21 @@ public sealed class ImagePipelineTests
     public void SameImageAndPresetProduceIdenticalPng()
     {
         var source = CreateFixture();
-        var preset = PresetCatalog.All.Single(item => item.Id == "protan-standard");
+        var preset = PresetCatalog.Create(Chromassist.Core.Models.PresetKind.Protan, 50);
 
         Assert.Equal(Encode(PresetTransformer.Transform(source, preset)), Encode(PresetTransformer.Transform(source, preset)));
+    }
+
+    [Fact]
+    public void ZeroStrengthProducesOriginalPixelsAndHundredIsStrongerThanFifty()
+    {
+        var source = CreateFixture();
+        var zero = PresetTransformer.Transform(source, PresetCatalog.Create(Chromassist.Core.Models.PresetKind.Protan, 0));
+        var fifty = PresetTransformer.Transform(source, PresetCatalog.Create(Chromassist.Core.Models.PresetKind.Protan, 50));
+        var hundred = PresetTransformer.Transform(source, PresetCatalog.Create(Chromassist.Core.Models.PresetKind.Protan, 100));
+
+        Assert.Equal(source.Pixels, zero.Pixels);
+        Assert.True(RgbDifference(source, hundred) > RgbDifference(source, fifty));
     }
 
     [Fact]
@@ -65,4 +77,7 @@ public sealed class ImagePipelineTests
         PngCodec.Write(stream, image);
         return stream.ToArray();
     }
+
+    private static int RgbDifference(RgbaImage first, RgbaImage second) =>
+        first.Pixels.Select((value, index) => index % 4 == 3 ? 0 : Math.Abs(value - second.Pixels[index])).Sum();
 }

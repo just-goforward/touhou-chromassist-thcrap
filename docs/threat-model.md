@@ -19,4 +19,4 @@
 - **Private data disclosure:** no telemetry or network upload; update checker is disabled until a documented opt-in implementation exists.
 - **Cheating-capability drift:** geometry/alpha tests, explicit forbidden-change policy, synthetic fixtures, code review.
 
-The application launches an existing local `thcrap.exe` only after explicit user action. It never launches the game during scanning or preview.
+The application launches the existing local `bin/thcrap_loader.exe` only after explicit user action. It never launches the game during scanning or preview.
