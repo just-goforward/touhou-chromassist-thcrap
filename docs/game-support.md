@@ -26,4 +26,6 @@ th18/bullet/bullet5@bullet@7.png
 th18/bullet/bullet6@bullet@9.png
 ```
 
-Items, lasers, effects, backgrounds, and additional sprite archives are outside the first implementation scope. Adding them requires role classification and separate fairness validation.
+The six extracted textures are classified as `EnemyProjectile`. Player shots, the player sprite, items, lasers, effects, backgrounds, UI, and additional sprite archives are outside the first implementation scope. The patch writer fails closed if an adapter supplies any role other than `EnemyProjectile`; adding another role requires an explicit adapter change and separate fairness validation.
+
+The strength-step context preview uses a checked-in list of representative 16×16 atlas coordinates, not checked-in game pixels. It composites only those cells over a screenshot selected by the user. This layout is a usability sample, not a complete semantic map of every TH18 projectile frame, and must be reverified if a new asset hash is admitted.

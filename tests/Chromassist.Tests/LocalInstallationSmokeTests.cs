@@ -32,6 +32,7 @@ public sealed class LocalInstallationSmokeTests
         Assert.Equal(6, extraction.Textures.Count);
         foreach (var texture in extraction.Textures)
         {
+            Assert.Equal(Chromassist.Core.Models.GameVisualRole.EnemyProjectile, texture.Role);
             var image = PngCodec.Read(texture.FilePath);
             Assert.True(image.Width > 0);
             Assert.True(image.Height > 0);
@@ -46,6 +47,8 @@ public sealed class LocalInstallationSmokeTests
             Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
             Assert.NotNull(result.PatchDirectory);
             Assert.NotNull(result.RunConfigurationPath);
+            Assert.All(result.Files, static file => Assert.True(file.NeutralPixelsPreserved));
+            Assert.True(result.Files.Sum(static file => file.ChangedOpaquePixelCount) > 0);
         }
     }
 }

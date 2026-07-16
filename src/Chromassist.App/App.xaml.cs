@@ -29,6 +29,7 @@ public partial class App : Application
             new LocalPatchBuilder(),
             new ThcrapSetupLauncher(),
             new ExecutablePicker(),
+            new ContextImagePicker(),
             new UserNotificationService());
 
         var window = new MainWindow(_viewModel);

@@ -47,7 +47,7 @@ public sealed class ThcrapTests
         await using var extraction = new ExtractionResult(
             true,
             extractionRoot,
-            [new ExtractedTexture("th18/bullet1@bullet@0.png", texturePath)],
+            [new ExtractedTexture("th18/bullet1@bullet@0.png", texturePath, GameVisualRole.EnemyProjectile)],
             []);
 
         var result = await new LocalPatchBuilder().BuildAsync(
@@ -72,6 +72,55 @@ public sealed class ThcrapTests
             generatedConfig.RootElement.GetProperty("patches")[4].GetProperty("archive").GetString());
         Assert.True(result.Files.Single().AlphaPreserved);
         Assert.True(result.Files.Single().TransparentPixelsPreserved);
+        Assert.True(result.Files.Single().NeutralPixelsPreserved);
+        Assert.Equal(1, result.Files.Single().ChangedOpaquePixelCount);
+        Assert.Equal(1, result.Files.Single().OpaquePixelCount);
+
+        using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(result.PatchDirectory!, "manifest.json")));
+        var scope = manifest.RootElement.GetProperty("scope");
+        Assert.Equal("enemy_projectile", scope.GetProperty("included_roles")[0].GetString());
+        Assert.Contains(
+            scope.GetProperty("excluded_roles").EnumerateArray().Select(static item => item.GetString()),
+            static role => role == "player_projectile");
+        Assert.True(scope.GetProperty("neutral_pixels_preserved").GetBoolean());
+        var manifestFile = manifest.RootElement.GetProperty("files")[0];
+        Assert.True(manifestFile.GetProperty("neutral_pixels_preserved").GetBoolean());
+        Assert.Equal(1, manifestFile.GetProperty("changed_opaque_pixel_count").GetInt32());
+    }
+
+    [Fact]
+    public async Task PatchBuilderRejectsAnythingOutsideEnemyProjectileScope()
+    {
+        using var fixture = new TemporaryDirectory();
+        var installation = CreateThcrapInstallation(fixture.Path);
+        var inspector = new ThcrapInspector().Inspect(installation, "2025-12-02");
+        var assetSet = new KnownAssetSet("fixture", "th18", "fixture", "synthetic", "exe", "dat", "2025-12-02", ["bullet1.png"]);
+        var validation = new GameValidationResult(
+            installation,
+            ValidationStatus.Supported,
+            "fixture",
+            assetSet,
+            "EXE",
+            "DAT",
+            inspector,
+            []);
+        var extractionRoot = Path.Combine(fixture.Path, "extraction");
+        Directory.CreateDirectory(extractionRoot);
+        var texturePath = Path.Combine(extractionRoot, "player.png");
+        PngCodec.Write(texturePath, new RgbaImage(1, 1, [220, 40, 30, 255]));
+        await using var extraction = new ExtractionResult(
+            true,
+            extractionRoot,
+            [new ExtractedTexture("th18/player.png", texturePath, GameVisualRole.PlayerProjectile)],
+            []);
+
+        var result = await new LocalPatchBuilder().BuildAsync(
+            validation,
+            extraction,
+            PresetCatalog.Create(PresetKind.Protan, 50));
+
+        Assert.False(result.Success);
+        Assert.Contains("적이 발사하는 탄막", result.Summary, StringComparison.Ordinal);
     }
 
     private static GameInstallation CreateThcrapInstallation(string root)

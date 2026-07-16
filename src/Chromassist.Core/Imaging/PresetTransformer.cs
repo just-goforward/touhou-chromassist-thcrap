@@ -5,6 +5,11 @@ namespace Chromassist.Core.Imaging;
 
 public static class PresetTransformer
 {
+    // Experimental guardrail: neutral cores, highlights, shadows, and grey UI-like pixels
+    // are not palette roles and must remain byte-identical.
+    public const double MinimumRoleChroma = 0.02;
+    private const double MinimumHueShiftDegrees = 0.01;
+
     public static RgbaImage Transform(RgbaImage source, ColorPreset preset)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -28,8 +33,18 @@ public static class PresetTransformer
                 source.Pixels[index + 1],
                 source.Pixels[index + 2]);
             var (lightness, chroma, hue) = lab.ToOklch();
+            if (chroma < MinimumRoleChroma)
+            {
+                continue;
+            }
+
             var hueDegrees = NormalizeDegrees(hue * 180 / Math.PI);
             var shift = SelectHueShift(hueDegrees, preset);
+            if (Math.Abs(shift) < MinimumHueShiftDegrees)
+            {
+                continue;
+            }
+
             var adjusted = OklabColor.FromOklch(
                 lightness,
                 chroma * preset.ChromaScale,

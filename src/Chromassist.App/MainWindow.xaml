@@ -123,6 +123,7 @@
                     <Grid Visibility="{Binding IsStrengthStep, Converter={StaticResource BooleanToVisibility}}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <StackPanel>
@@ -143,7 +144,25 @@
                                 <TextBlock Text="{Binding StrengthHighLabel}" HorizontalAlignment="Right" Foreground="#FF68717C" />
                             </Grid>
                         </StackPanel>
-                        <Grid Grid.Row="1" Margin="0,18,0,0">
+                        <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <Button Content="{Binding AddContextImagesLabel}" Command="{Binding AddContextImagesCommand}" Padding="10,5" MinHeight="32" Margin="0,0,8,0" />
+                                <Button Grid.Column="1" Content="{Binding UseNeutralContextLabel}" Command="{Binding UseNeutralContextCommand}" Padding="10,5" MinHeight="32" Margin="0,0,8,0" />
+                                <Button Grid.Column="2" Content="{Binding RemoveContextImageLabel}" Command="{Binding RemoveContextImageCommand}" Padding="10,5" MinHeight="32" />
+                                <ComboBox Grid.Column="3" ItemsSource="{Binding ContextImages}" SelectedItem="{Binding SelectedContextImage, Mode=TwoWay}"
+                                          DisplayMemberPath="DisplayName" MinWidth="190" Height="32" Margin="12,0,0,0" HorizontalAlignment="Right" />
+                            </Grid>
+                            <TextBlock Text="{Binding ContextModeDescription}" Margin="0,7,0,0" Foreground="#FF4F5966" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding WhyAdjustmentText}" Margin="0,3,0,0" FontSize="12" Foreground="#FF315A78" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding ContextPrivacyNotice}" Margin="0,3,0,0" FontSize="12" Foreground="#FF707985" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Grid Grid.Row="2" Margin="0,12,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition />
                                 <ColumnDefinition Width="18" />

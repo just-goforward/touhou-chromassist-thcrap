@@ -89,4 +89,4 @@ public sealed record ExtractionResult(
     }
 }
 
-public sealed record ExtractedTexture(string VirtualPath, string FilePath);
+public sealed record ExtractedTexture(string VirtualPath, string FilePath, GameVisualRole Role);

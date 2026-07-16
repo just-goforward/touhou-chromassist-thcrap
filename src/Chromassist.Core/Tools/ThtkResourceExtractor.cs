@@ -82,7 +82,10 @@ public sealed class ThtkResourceExtractor : IResourceExtractor
             }
 
             var textures = TextureMappings
-                .Select(mapping => new ExtractedTexture(mapping.VirtualPath, Path.Combine(stagingDirectory, mapping.OutputFile)))
+                .Select(mapping => new ExtractedTexture(
+                    mapping.VirtualPath,
+                    Path.Combine(stagingDirectory, mapping.OutputFile),
+                    GameVisualRole.EnemyProjectile))
                 .Where(texture => File.Exists(texture.FilePath))
                 .ToArray();
             if (textures.Length != TextureMappings.Length)

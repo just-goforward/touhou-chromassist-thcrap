@@ -31,6 +31,11 @@ public sealed class LocalPatchBuilder : IPatchBuilder
             return Failure("검증된 게임, thcrap, 추출 결과가 모두 필요합니다.");
         }
 
+        if (extraction.Textures.Any(static texture => texture.Role is not GameVisualRole.EnemyProjectile))
+        {
+            return Failure("현재 fairness envelope는 적이 발사하는 탄막 texture만 허용합니다.");
+        }
+
         var thcrapDirectory = Path.GetFullPath(validation.Installation.ThcrapDirectory);
         var repositoryDirectory = Path.Combine(thcrapDirectory, "repos", "chromassist");
         var patchId = $"th18-{SanitizeId(preset.Id)}";
@@ -58,6 +63,7 @@ public sealed class LocalPatchBuilder : IPatchBuilder
 
                 PngCodec.Write(destination, outputImage);
                 var difference = MeasureDifference(sourceImage, outputImage);
+                var roleChanges = MeasureRoleChanges(sourceImage, outputImage);
                 records.Add(new GeneratedFileRecord(
                     texture.VirtualPath.Replace('\\', '/'),
                     await FileHash.Sha256Async(texture.FilePath, cancellationToken).ConfigureAwait(false),
@@ -66,6 +72,9 @@ public sealed class LocalPatchBuilder : IPatchBuilder
                     sourceImage.Height,
                     invariant.AlphaPreserved,
                     invariant.TransparentPixelsPreserved,
+                    roleChanges.NeutralPixelsPreserved,
+                    roleChanges.ChangedOpaquePixelCount,
+                    roleChanges.OpaquePixelCount,
                     difference.Mean,
                     difference.Maximum));
             }
@@ -125,6 +134,12 @@ public sealed class LocalPatchBuilder : IPatchBuilder
                 preset.ChromaScale,
                 preset.StrengthPercent,
                 user_modified = false
+            },
+            scope = new
+            {
+                included_roles = new[] { "enemy_projectile" },
+                excluded_roles = new[] { "player_projectile", "player", "item", "background", "effect", "ui" },
+                neutral_pixels_preserved = true
             },
             fairness = new
             {
@@ -264,6 +279,43 @@ public sealed class LocalPatchBuilder : IPatchBuilder
         }
 
         return count == 0 ? (0, 0) : (total / count, maximum);
+    }
+
+    private static (bool NeutralPixelsPreserved, int ChangedOpaquePixelCount, int OpaquePixelCount) MeasureRoleChanges(
+        RgbaImage source,
+        RgbaImage output)
+    {
+        var neutralPreserved = true;
+        var changed = 0;
+        var opaque = 0;
+        for (var index = 0; index < source.Pixels.Length; index += 4)
+        {
+            if (source.Pixels[index + 3] == 0)
+            {
+                continue;
+            }
+
+            opaque++;
+            var rgbChanged = source.Pixels[index] != output.Pixels[index] ||
+                source.Pixels[index + 1] != output.Pixels[index + 1] ||
+                source.Pixels[index + 2] != output.Pixels[index + 2];
+            if (rgbChanged)
+            {
+                changed++;
+            }
+
+            var sourceColor = OklabColor.FromSrgb(
+                source.Pixels[index],
+                source.Pixels[index + 1],
+                source.Pixels[index + 2]);
+            var (_, chroma, _) = sourceColor.ToOklch();
+            if (chroma < PresetTransformer.MinimumRoleChroma && rgbChanged)
+            {
+                neutralPreserved = false;
+            }
+        }
+
+        return (neutralPreserved, changed, opaque);
     }
 
     private static string SanitizeId(string value)

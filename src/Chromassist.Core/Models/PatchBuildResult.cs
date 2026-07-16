@@ -16,5 +16,8 @@ public sealed record GeneratedFileRecord(
     int Height,
     bool AlphaPreserved,
     bool TransparentPixelsPreserved,
+    bool NeutralPixelsPreserved,
+    int ChangedOpaquePixelCount,
+    int OpaquePixelCount,
     double MeanOklabDelta,
     double MaximumOklabDelta);

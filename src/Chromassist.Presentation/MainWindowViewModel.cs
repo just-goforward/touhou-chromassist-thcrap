@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Chromassist.Core.Games.Th18;
 using Chromassist.Core.Imaging;
 using Chromassist.Core.Models;
 using Chromassist.Core.Presets;
@@ -15,9 +16,11 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private readonly IPatchBuilder _patchBuilder;
     private readonly IThcrapSetupLauncher _setupLauncher;
     private readonly IExecutablePicker _executablePicker;
+    private readonly IContextImagePicker _contextImagePicker;
     private readonly IUserNotificationService _notifications;
     private readonly TextCatalog _texts;
     private GameItemViewModel? _selectedGame;
+    private ContextImageItemViewModel? _selectedContextImage;
     private PresetKind _selectedVisionType = PresetKind.Protan;
     private double _strengthPercent = 50;
     private ColorPreset _currentPreset = PresetCatalog.Create(PresetKind.Protan, 50);
@@ -36,7 +39,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private int _expectedFileCount;
     private bool _alphaPreserved;
     private bool _transparentPixelsPreserved;
+    private bool _neutralPixelsPreserved;
     private bool _repositoryMetadataPresent;
+    private int _changedOpaquePixelCount;
+    private int _opaquePixelCount;
 
     public MainWindowViewModel(
         IGameLocator gameLocator,
@@ -45,6 +51,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         IPatchBuilder patchBuilder,
         IThcrapSetupLauncher setupLauncher,
         IExecutablePicker executablePicker,
+        IContextImagePicker contextImagePicker,
         IUserNotificationService notifications,
         TextCatalog? texts = null)
     {
@@ -54,12 +61,16 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _patchBuilder = patchBuilder;
         _setupLauncher = setupLauncher;
         _executablePicker = executablePicker;
+        _contextImagePicker = contextImagePicker;
         _notifications = notifications;
         _texts = texts ?? new TextCatalog();
         _statusText = _texts["Ready"];
 
         ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy);
         BrowseCommand = new AsyncRelayCommand(BrowseAsync, () => !IsBusy);
+        AddContextImagesCommand = new AsyncRelayCommand(AddContextImagesAsync, () => !IsBusy);
+        RemoveContextImageCommand = new RelayCommand(RemoveSelectedContextImage, CanRemoveContextImage);
+        UseNeutralContextCommand = new RelayCommand(UseNeutralContext, CanUseNeutralContext);
         BackCommand = new RelayCommand(GoBack, CanGoBack);
         NextCommand = new RelayCommand(GoNext, CanGoNext);
         PrepareAndOpenSetupCommand = new AsyncRelayCommand(PrepareAndOpenSetupAsync, CanApply);
@@ -67,11 +78,19 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public ObservableCollection<GameItemViewModel> Games { get; } = [];
 
+    public ObservableCollection<ContextImageItemViewModel> ContextImages { get; } = [];
+
     public IReadOnlyList<string> Languages { get; } = ["ko", "ja", "en"];
 
     public AsyncRelayCommand ScanCommand { get; }
 
     public AsyncRelayCommand BrowseCommand { get; }
+
+    public AsyncRelayCommand AddContextImagesCommand { get; }
+
+    public RelayCommand RemoveContextImageCommand { get; }
+
+    public RelayCommand UseNeutralContextCommand { get; }
 
     public RelayCommand BackCommand { get; }
 
@@ -110,7 +129,23 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             OnPropertyChanged(nameof(IsTritanSelected));
             OnPropertyChanged(nameof(SelectedVisionTypeLabel));
             OnPropertyChanged(nameof(SelectedVisionTypeDescription));
+            OnPropertyChanged(nameof(WhyAdjustmentText));
             RefreshPresetAndPreview();
+        }
+    }
+
+    public ContextImageItemViewModel? SelectedContextImage
+    {
+        get => _selectedContextImage;
+        set
+        {
+            if (SetProperty(ref _selectedContextImage, value))
+            {
+                OnPropertyChanged(nameof(ContextModeDescription));
+                RemoveContextImageCommand.NotifyCanExecuteChanged();
+                UseNeutralContextCommand.NotifyCanExecuteChanged();
+                UpdatePreview();
+            }
         }
     }
 
@@ -187,6 +222,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             {
                 ScanCommand.NotifyCanExecuteChanged();
                 BrowseCommand.NotifyCanExecuteChanged();
+                AddContextImagesCommand.NotifyCanExecuteChanged();
+                RemoveContextImageCommand.NotifyCanExecuteChanged();
+                UseNeutralContextCommand.NotifyCanExecuteChanged();
                 NotifyCommandStates();
             }
         }
@@ -236,6 +274,14 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public string StrengthLabel => _texts["Strength"];
     public string StrengthLowLabel => _texts["StrengthLow"];
     public string StrengthHighLabel => _texts["StrengthHigh"];
+    public string AddContextImagesLabel => _texts["AddContextImages"];
+    public string RemoveContextImageLabel => _texts["RemoveContextImage"];
+    public string UseNeutralContextLabel => _texts["UseNeutralContext"];
+    public string ContextPrivacyNotice => _texts["ContextPrivacyNotice"];
+    public string ContextModeDescription => SelectedContextImage is null
+        ? _texts["NeutralPreviewDescription"]
+        : string.Format(_texts["StageContextPreviewDescription"], SelectedContextImage.DisplayName);
+    public string WhyAdjustmentText => _texts[$"Why{SelectedVisionType}"];
     public string StrengthDisplay => $"{StrengthPercent:0.0}%";
     public string ExperimentalNotice => _texts["Experimental"];
     public string SelectedVisionTypeLabel => _texts[SelectedVisionType.ToString()];
@@ -258,7 +304,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             _expectedFileCount,
             _alphaPreserved ? _texts["Yes"] : _texts["No"],
             _transparentPixelsPreserved ? _texts["Yes"] : _texts["No"],
-            _repositoryMetadataPresent ? _texts["Yes"] : _texts["No"]);
+            _repositoryMetadataPresent ? _texts["Yes"] : _texts["No"],
+            _neutralPixelsPreserved ? _texts["Yes"] : _texts["No"],
+            _changedOpaquePixelCount,
+            _opaquePixelCount);
 
     public Task InitializeAsync() => ScanAsync();
 
@@ -355,7 +404,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _currentPreset = PresetCatalog.Create(SelectedVisionType, StrengthPercent);
         GeneratedPatchSelectionName = null;
         GeneratedPatchDirectory = null;
-        SetPreparationVerification(null, 0, _extraction?.Textures.Count ?? 0, false, false, false);
+        SetPreparationVerification(null, 0, _extraction?.Textures.Count ?? 0, false, false, false, false, 0, 0);
         OnPropertyChanged(nameof(DisplayedPatchSelectionName));
         OnPropertyChanged(nameof(SelectedVisionTypeDescription));
         UpdatePreview();
@@ -367,7 +416,6 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         if (_previewSource is null && previewPath is not null && File.Exists(previewPath))
         {
             _previewSource = PngCodec.Read(previewPath);
-            OriginalPreview = Encode(_previewSource);
         }
 
         if (_previewSource is null)
@@ -378,8 +426,58 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
 
         var adjusted = PresetTransformer.Transform(_previewSource, _currentPreset);
-        AdjustedPreview = Encode(adjusted);
+        if (SelectedContextImage is null)
+        {
+            OriginalPreview = Encode(_previewSource);
+            AdjustedPreview = Encode(adjusted);
+            return;
+        }
+
+        var regions = Th18EnemyProjectilePreviewLayout.RepresentativeRegions;
+        var originalContext = ContextPreviewComposer.Compose(SelectedContextImage.Image, _previewSource, regions);
+        var adjustedContext = ContextPreviewComposer.Compose(SelectedContextImage.Image, adjusted, regions);
+        OriginalPreview = Encode(originalContext.Image);
+        AdjustedPreview = Encode(adjustedContext.Image);
     }
+
+    private Task AddContextImagesAsync() => ExecuteBusyAsync(() =>
+    {
+        var selections = _contextImagePicker.PickImages(_texts["ContextPickerTitle"]);
+        ContextImageItemViewModel? firstAdded = null;
+        foreach (var selection in selections)
+        {
+            var item = new ContextImageItemViewModel(selection);
+            ContextImages.Add(item);
+            firstAdded ??= item;
+        }
+
+        if (firstAdded is not null)
+        {
+            SelectedContextImage = firstAdded;
+        }
+
+        return Task.CompletedTask;
+    });
+
+    private void RemoveSelectedContextImage()
+    {
+        if (SelectedContextImage is null)
+        {
+            return;
+        }
+
+        var index = ContextImages.IndexOf(SelectedContextImage);
+        ContextImages.Remove(SelectedContextImage);
+        SelectedContextImage = ContextImages.Count == 0
+            ? null
+            : ContextImages[Math.Clamp(index, 0, ContextImages.Count - 1)];
+    }
+
+    private bool CanRemoveContextImage() => !IsBusy && SelectedContextImage is not null;
+
+    private void UseNeutralContext() => SelectedContextImage = null;
+
+    private bool CanUseNeutralContext() => !IsBusy && SelectedContextImage is not null;
 
     private void GoBack()
     {
@@ -426,7 +524,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 return;
             }
 
-            SetPreparationVerification(null, 0, _extraction.Textures.Count, false, false, false);
+            SetPreparationVerification(null, 0, _extraction.Textures.Count, false, false, false, false, 0, 0);
             StatusText = _texts["GeneratingPatch"];
             var result = await _patchBuilder.BuildAsync(validation, _extraction, _currentPreset).ConfigureAwait(true);
             if (!result.Success || result.RunConfigurationPath is null || result.PatchDirectory is null ||
@@ -442,7 +540,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             GeneratedPatchDirectory = result.PatchDirectory;
             var repositoryMetadata = Path.Combine(Path.GetDirectoryName(result.PatchDirectory)!, "repo.js");
             var prepared = result.Files.Count == _extraction.Textures.Count &&
-                result.Files.All(static file => file.AlphaPreserved && file.TransparentPixelsPreserved) &&
+                result.Files.All(static file => file.AlphaPreserved && file.TransparentPixelsPreserved && file.NeutralPixelsPreserved) &&
                 File.Exists(repositoryMetadata);
             SetPreparationVerification(
                 prepared,
@@ -450,7 +548,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 _extraction.Textures.Count,
                 result.Files.All(static file => file.AlphaPreserved),
                 result.Files.All(static file => file.TransparentPixelsPreserved),
-                File.Exists(repositoryMetadata));
+                result.Files.All(static file => file.NeutralPixelsPreserved),
+                File.Exists(repositoryMetadata),
+                result.Files.Sum(static file => file.ChangedOpaquePixelCount),
+                result.Files.Sum(static file => file.OpaquePixelCount));
             if (!prepared)
             {
                 StatusText = _texts["VerificationFailed"];
@@ -537,14 +638,20 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         int expectedFileCount,
         bool alphaPreserved,
         bool transparentPixelsPreserved,
-        bool repositoryMetadataPresent)
+        bool neutralPixelsPreserved,
+        bool repositoryMetadataPresent,
+        int changedOpaquePixelCount,
+        int opaquePixelCount)
     {
         _preparationVerified = success;
         _preparedFileCount = preparedFileCount;
         _expectedFileCount = expectedFileCount;
         _alphaPreserved = alphaPreserved;
         _transparentPixelsPreserved = transparentPixelsPreserved;
+        _neutralPixelsPreserved = neutralPixelsPreserved;
         _repositoryMetadataPresent = repositoryMetadataPresent;
+        _changedOpaquePixelCount = changedOpaquePixelCount;
+        _opaquePixelCount = opaquePixelCount;
         OnPropertyChanged(nameof(VerificationHeadline));
         OnPropertyChanged(nameof(VerificationDetails));
     }
@@ -564,7 +671,9 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             nameof(RescanLabel), nameof(BrowseLabel), nameof(BackLabel), nameof(NextLabel), nameof(ApplyLaunchLabel),
             nameof(OriginalLabel), nameof(AdjustedLabel), nameof(ProtanLabel), nameof(DeutanLabel), nameof(TritanLabel),
             nameof(ProtanDescription), nameof(DeutanDescription), nameof(TritanDescription), nameof(StrengthLabel),
-            nameof(StrengthLowLabel), nameof(StrengthHighLabel), nameof(ExperimentalNotice), nameof(SelectedVisionTypeLabel),
+            nameof(StrengthLowLabel), nameof(StrengthHighLabel), nameof(AddContextImagesLabel), nameof(RemoveContextImageLabel),
+            nameof(UseNeutralContextLabel),
+            nameof(ContextPrivacyNotice), nameof(ContextModeDescription), nameof(WhyAdjustmentText), nameof(ExperimentalNotice), nameof(SelectedVisionTypeLabel),
             nameof(SelectedVisionTypeDescription), nameof(GameSummaryLabel), nameof(VisionSummaryLabel),
             nameof(StrengthSummaryLabel), nameof(ConfigSummaryLabel), nameof(PendingConfigLabel), nameof(DisplayedPatchSelectionName),
             nameof(SetupInstructions), nameof(VerificationHeadline), nameof(VerificationDetails)
