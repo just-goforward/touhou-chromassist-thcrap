@@ -37,8 +37,7 @@ public sealed class LocalInstallationSmokeTests
             Assert.True(image.Height > 0);
         }
 
-        var shouldLaunch = string.Equals(Environment.GetEnvironmentVariable("CHROMASSIST_SMOKE_LAUNCH"), "1", StringComparison.Ordinal);
-        if (shouldLaunch || string.Equals(Environment.GetEnvironmentVariable("CHROMASSIST_SMOKE_APPLY"), "1", StringComparison.Ordinal))
+        if (string.Equals(Environment.GetEnvironmentVariable("CHROMASSIST_SMOKE_APPLY"), "1", StringComparison.Ordinal))
         {
             var result = await new LocalPatchBuilder().BuildAsync(
                 validation,
@@ -47,22 +46,6 @@ public sealed class LocalInstallationSmokeTests
             Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
             Assert.NotNull(result.PatchDirectory);
             Assert.NotNull(result.RunConfigurationPath);
-
-            if (shouldLaunch)
-            {
-                var launch = await new ThcrapGameLauncher().LaunchAsync(
-                    validation.Installation.ThcrapDirectory!,
-                    result.RunConfigurationPath!,
-                    validation.Installation.GameId);
-                var verification = await new ThcrapPatchVerifier().VerifyAsync(new PatchVerificationRequest(
-                    validation.Installation.ThcrapDirectory!,
-                    result.RunConfigurationPath!,
-                    result.PatchDirectory!,
-                    extraction.Textures.Select(static texture => texture.VirtualPath).ToArray(),
-                    launch.StartedAtUtc,
-                    TimeSpan.FromSeconds(60)));
-                Assert.True(verification.Success, string.Join(Environment.NewLine, verification.Diagnostics));
-            }
         }
     }
 }

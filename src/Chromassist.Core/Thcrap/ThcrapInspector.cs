@@ -13,11 +13,12 @@ public sealed class ThcrapInspector
             return ThcrapInspection.Missing;
         }
 
-        var executable = Path.Combine(installation.ThcrapDirectory, "bin", "thcrap_loader.exe");
+        var loader = Path.Combine(installation.ThcrapDirectory, "bin", "thcrap_loader.exe");
+        var setup = Path.Combine(installation.ThcrapDirectory, "thcrap.exe");
         var config = Path.Combine(installation.ThcrapDirectory, "config", "thpatch-ko.js");
-        if (!File.Exists(executable) || !File.Exists(config))
+        if (!File.Exists(loader) || !File.Exists(setup) || !File.Exists(config))
         {
-            return new ThcrapInspection(true, false, null, null, [], "thcrap loader 또는 한국어 실행 설정이 없습니다.");
+            return new ThcrapInspection(true, false, null, null, [], "thcrap 설정 도구, loader 또는 한국어 실행 설정이 없습니다.");
         }
 
         var diagnostics = new List<string>();

@@ -101,7 +101,7 @@ public sealed class LocalPatchBuilder : IPatchBuilder
         var patch = new
         {
             id = patchId,
-            title = $"TH Chromassist local palette: {preset.DisplayName}",
+            title = $"TH Chromassist: {UserFacingEnglishName(preset.Kind)} ({preset.StrengthPercent:0.0}%)",
             update = false,
             dependencies = new[] { "nmlgc/base_tsa" },
             supported_games = new[] { "th18" }
@@ -272,6 +272,14 @@ public sealed class LocalPatchBuilder : IPatchBuilder
             char.IsAsciiLetterOrDigit(character) || character == '-' ? character : '-').ToArray());
         return sanitized.Trim('-');
     }
+
+    private static string UserFacingEnglishName(PresetKind kind) => kind switch
+    {
+        PresetKind.Protan => "Protan red-green CVD",
+        PresetKind.Deutan => "Deutan red-green CVD",
+        PresetKind.Tritan => "Tritan blue-yellow CVD",
+        _ => "Original colours"
+    };
 
     private static void TryDeleteDirectory(string path)
     {

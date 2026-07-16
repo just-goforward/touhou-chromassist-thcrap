@@ -27,8 +27,7 @@ public partial class App : Application
             validator,
             extractor,
             new LocalPatchBuilder(),
-            new ThcrapGameLauncher(),
-            new ThcrapPatchVerifier(),
+            new ThcrapSetupLauncher(),
             new ExecutablePicker(),
             new UserNotificationService());
 

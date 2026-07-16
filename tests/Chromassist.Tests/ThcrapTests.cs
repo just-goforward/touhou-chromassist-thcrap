@@ -82,6 +82,7 @@ public sealed class ThcrapTests
         Directory.CreateDirectory(Path.Combine(thcrap, "bin"));
         File.WriteAllBytes(Path.Combine(root, "th18.exe"), [1]);
         File.WriteAllBytes(Path.Combine(root, "th18.dat"), [2]);
+        File.WriteAllBytes(Path.Combine(thcrap, "thcrap.exe"), [3]);
         File.WriteAllBytes(Path.Combine(thcrap, "bin", "thcrap_loader.exe"), [3]);
         File.WriteAllText(Path.Combine(thcrap, "logs", "thcrap_log.txt"), "Branch: stable\nVersion: 2025-12-02\n");
         File.WriteAllText(Path.Combine(thcrap, "config", "thpatch-ko.js"), """

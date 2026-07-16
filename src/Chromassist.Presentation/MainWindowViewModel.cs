@@ -13,8 +13,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private readonly IGameValidator _gameValidator;
     private readonly IResourceExtractor _resourceExtractor;
     private readonly IPatchBuilder _patchBuilder;
-    private readonly IGameLauncher _gameLauncher;
-    private readonly IPatchApplicationVerifier _patchVerifier;
+    private readonly IThcrapSetupLauncher _setupLauncher;
     private readonly IExecutablePicker _executablePicker;
     private readonly IUserNotificationService _notifications;
     private readonly TextCatalog _texts;
@@ -27,19 +26,24 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private string? _preparedExecutable;
     private byte[]? _originalPreview;
     private byte[]? _adjustedPreview;
+    private RgbaImage? _previewSource;
     private string _statusText;
     private bool _isBusy;
-    private string? _generatedConfigurationName;
+    private string? _generatedPatchSelectionName;
     private string? _generatedPatchDirectory;
-    private PatchVerificationResult? _verificationResult;
+    private bool? _preparationVerified;
+    private int _preparedFileCount;
+    private int _expectedFileCount;
+    private bool _alphaPreserved;
+    private bool _transparentPixelsPreserved;
+    private bool _repositoryMetadataPresent;
 
     public MainWindowViewModel(
         IGameLocator gameLocator,
         IGameValidator gameValidator,
         IResourceExtractor resourceExtractor,
         IPatchBuilder patchBuilder,
-        IGameLauncher gameLauncher,
-        IPatchApplicationVerifier patchVerifier,
+        IThcrapSetupLauncher setupLauncher,
         IExecutablePicker executablePicker,
         IUserNotificationService notifications,
         TextCatalog? texts = null)
@@ -48,8 +52,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         _gameValidator = gameValidator;
         _resourceExtractor = resourceExtractor;
         _patchBuilder = patchBuilder;
-        _gameLauncher = gameLauncher;
-        _patchVerifier = patchVerifier;
+        _setupLauncher = setupLauncher;
         _executablePicker = executablePicker;
         _notifications = notifications;
         _texts = texts ?? new TextCatalog();
@@ -59,7 +62,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         BrowseCommand = new AsyncRelayCommand(BrowseAsync, () => !IsBusy);
         BackCommand = new RelayCommand(GoBack, CanGoBack);
         NextCommand = new RelayCommand(GoNext, CanGoNext);
-        ApplyAndLaunchCommand = new AsyncRelayCommand(ApplyAndLaunchAsync, CanApply);
+        PrepareAndOpenSetupCommand = new AsyncRelayCommand(PrepareAndOpenSetupAsync, CanApply);
     }
 
     public ObservableCollection<GameItemViewModel> Games { get; } = [];
@@ -74,7 +77,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     public RelayCommand NextCommand { get; }
 
-    public AsyncRelayCommand ApplyAndLaunchCommand { get; }
+    public AsyncRelayCommand PrepareAndOpenSetupCommand { get; }
 
     public GameItemViewModel? SelectedGame
     {
@@ -134,8 +137,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         get => _strengthPercent;
         set
         {
-            var rounded = Math.Round(Math.Clamp(value, 0, 100));
-            if (SetProperty(ref _strengthPercent, rounded))
+            var clamped = Math.Clamp(value, 0, 100);
+            if (SetProperty(ref _strengthPercent, clamped))
             {
                 OnPropertyChanged(nameof(StrengthDisplay));
                 RefreshPresetAndPreview();
@@ -189,14 +192,14 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    public string? GeneratedConfigurationName
+    public string? GeneratedPatchSelectionName
     {
-        get => _generatedConfigurationName;
+        get => _generatedPatchSelectionName;
         private set
         {
-            if (SetProperty(ref _generatedConfigurationName, value))
+            if (SetProperty(ref _generatedPatchSelectionName, value))
             {
-                OnPropertyChanged(nameof(DisplayedConfigurationName));
+                OnPropertyChanged(nameof(DisplayedPatchSelectionName));
             }
         }
     }
@@ -207,24 +210,11 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         private set => SetProperty(ref _generatedPatchDirectory, value);
     }
 
-    public PatchVerificationResult? VerificationResult
-    {
-        get => _verificationResult;
-        private set
-        {
-            if (SetProperty(ref _verificationResult, value))
-            {
-                OnPropertyChanged(nameof(VerificationHeadline));
-                OnPropertyChanged(nameof(VerificationDetails));
-            }
-        }
-    }
-
     public bool IsGameStep => _currentStep == WizardStep.Game;
     public bool IsVisionStep => _currentStep == WizardStep.VisionType;
     public bool IsStrengthStep => _currentStep == WizardStep.StrengthPreview;
-    public bool IsApplyStep => _currentStep == WizardStep.ApplyAndVerify;
-    public bool IsNotApplyStep => _currentStep != WizardStep.ApplyAndVerify;
+    public bool IsApplyStep => _currentStep == WizardStep.PrepareAndConfigure;
+    public bool IsNotApplyStep => _currentStep != WizardStep.PrepareAndConfigure;
     public string StepProgressText => $"{(int)_currentStep + 1} / 4";
     public string AppTitle => _texts["AppTitle"];
     public string Subtitle => _texts["Subtitle"];
@@ -246,7 +236,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public string StrengthLabel => _texts["Strength"];
     public string StrengthLowLabel => _texts["StrengthLow"];
     public string StrengthHighLabel => _texts["StrengthHigh"];
-    public string StrengthDisplay => $"{StrengthPercent:0}%";
+    public string StrengthDisplay => $"{StrengthPercent:0.0}%";
     public string ExperimentalNotice => _texts["Experimental"];
     public string SelectedVisionTypeLabel => _texts[SelectedVisionType.ToString()];
     public string SelectedVisionTypeDescription => _texts[$"{SelectedVisionType}Description"];
@@ -255,20 +245,20 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     public string StrengthSummaryLabel => _texts["StrengthSummary"];
     public string ConfigSummaryLabel => _texts["ConfigSummary"];
     public string PendingConfigLabel => _texts["PendingConfig"];
-    public string DisplayedConfigurationName => GeneratedConfigurationName ?? PendingConfigLabel;
-    public string VerificationHeadline => VerificationResult is null
+    public string SetupInstructions => _texts["SetupInstructions"];
+    public string DisplayedPatchSelectionName => GeneratedPatchSelectionName ?? $"chromassist/th18-{_currentPreset.Id}";
+    public string VerificationHeadline => _preparationVerified is null
         ? _texts["VerificationPending"]
-        : VerificationResult.AllExpectedFilesResolved
-            ? _texts["VerificationRuntimeSuccess"]
-            : VerificationResult.Success ? _texts["VerificationStackSuccess"] : _texts["VerificationFailed"];
-    public string VerificationDetails => VerificationResult is null
+        : _preparationVerified.Value ? _texts["VerificationPreparationSuccess"] : _texts["VerificationFailed"];
+    public string VerificationDetails => _preparationVerified is null
         ? _texts["VerificationPendingDescription"]
         : string.Format(
-            _texts["VerificationFiles"],
-            VerificationResult.ResolvedFileCount,
-            VerificationResult.ExpectedFileCount,
-            VerificationResult.RunConfigurationLoaded ? _texts["Yes"] : _texts["No"],
-            VerificationResult.PatchStackLoaded ? _texts["Yes"] : _texts["No"]);
+            _texts["VerificationPreparationDetails"],
+            _preparedFileCount,
+            _expectedFileCount,
+            _alphaPreserved ? _texts["Yes"] : _texts["No"],
+            _transparentPixelsPreserved ? _texts["Yes"] : _texts["No"],
+            _repositoryMetadataPresent ? _texts["Yes"] : _texts["No"]);
 
     public Task InitializeAsync() => ScanAsync();
 
@@ -363,6 +353,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private void RefreshPresetAndPreview()
     {
         _currentPreset = PresetCatalog.Create(SelectedVisionType, StrengthPercent);
+        GeneratedPatchSelectionName = null;
+        GeneratedPatchDirectory = null;
+        SetPreparationVerification(null, 0, _extraction?.Textures.Count ?? 0, false, false, false);
+        OnPropertyChanged(nameof(DisplayedPatchSelectionName));
         OnPropertyChanged(nameof(SelectedVisionTypeDescription));
         UpdatePreview();
     }
@@ -370,16 +364,20 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     private void UpdatePreview()
     {
         var previewPath = _extraction?.Textures.FirstOrDefault()?.FilePath;
-        if (previewPath is null || !File.Exists(previewPath))
+        if (_previewSource is null && previewPath is not null && File.Exists(previewPath))
+        {
+            _previewSource = PngCodec.Read(previewPath);
+            OriginalPreview = Encode(_previewSource);
+        }
+
+        if (_previewSource is null)
         {
             OriginalPreview = null;
             AdjustedPreview = null;
             return;
         }
 
-        var source = PngCodec.Read(previewPath);
-        var adjusted = PresetTransformer.Transform(source, _currentPreset);
-        OriginalPreview ??= Encode(source);
+        var adjusted = PresetTransformer.Transform(_previewSource, _currentPreset);
         AdjustedPreview = Encode(adjusted);
     }
 
@@ -418,7 +416,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         NotifyCommandStates();
     }
 
-    private async Task ApplyAndLaunchAsync()
+    private async Task PrepareAndOpenSetupAsync()
     {
         await ExecuteBusyAsync(async () =>
         {
@@ -428,7 +426,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 return;
             }
 
-            VerificationResult = null;
+            SetPreparationVerification(null, 0, _extraction.Textures.Count, false, false, false);
             StatusText = _texts["GeneratingPatch"];
             var result = await _patchBuilder.BuildAsync(validation, _extraction, _currentPreset).ConfigureAwait(true);
             if (!result.Success || result.RunConfigurationPath is null || result.PatchDirectory is null ||
@@ -440,24 +438,29 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
                 return;
             }
 
-            GeneratedConfigurationName = Path.GetFileName(result.RunConfigurationPath);
+            GeneratedPatchSelectionName = $"chromassist/{Path.GetFileName(result.PatchDirectory)}";
             GeneratedPatchDirectory = result.PatchDirectory;
-            OnPropertyChanged(nameof(VerificationHeadline));
-            StatusText = _texts["Launching"];
-            var launch = await _gameLauncher.LaunchAsync(
-                validation.Installation.ThcrapDirectory,
-                result.RunConfigurationPath,
-                validation.Installation.GameId).ConfigureAwait(true);
+            var repositoryMetadata = Path.Combine(Path.GetDirectoryName(result.PatchDirectory)!, "repo.js");
+            var prepared = result.Files.Count == _extraction.Textures.Count &&
+                result.Files.All(static file => file.AlphaPreserved && file.TransparentPixelsPreserved) &&
+                File.Exists(repositoryMetadata);
+            SetPreparationVerification(
+                prepared,
+                result.Files.Count,
+                _extraction.Textures.Count,
+                result.Files.All(static file => file.AlphaPreserved),
+                result.Files.All(static file => file.TransparentPixelsPreserved),
+                File.Exists(repositoryMetadata));
+            if (!prepared)
+            {
+                StatusText = _texts["VerificationFailed"];
+                _notifications.ShowError(_texts["ErrorTitle"], VerificationDetails);
+                return;
+            }
 
-            StatusText = _texts["Verifying"];
-            VerificationResult = await _patchVerifier.VerifyAsync(new PatchVerificationRequest(
-                validation.Installation.ThcrapDirectory,
-                result.RunConfigurationPath,
-                result.PatchDirectory,
-                _extraction.Textures.Select(static texture => texture.VirtualPath).ToArray(),
-                launch.StartedAtUtc,
-                TimeSpan.FromSeconds(20))).ConfigureAwait(true);
-            StatusText = VerificationHeadline;
+            StatusText = _texts["LaunchingSetup"];
+            await _setupLauncher.LaunchAsync(validation.Installation.ThcrapDirectory).ConfigureAwait(true);
+            StatusText = _texts["SetupOpened"];
         }).ConfigureAwait(true);
     }
 
@@ -488,6 +491,7 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
         }
 
         _preparedExecutable = null;
+        _previewSource = null;
         OriginalPreview = null;
         AdjustedPreview = null;
         NotifyCommandStates();
@@ -497,10 +501,10 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
 
     private bool CanGoNext() =>
         !IsBusy &&
-        _currentStep < WizardStep.ApplyAndVerify &&
+        _currentStep < WizardStep.PrepareAndConfigure &&
         (_currentStep != WizardStep.Game || IsPreparedForSelectedGame());
 
-    private bool CanApply() => !IsBusy && _currentStep == WizardStep.ApplyAndVerify && IsPreparedForSelectedGame();
+    private bool CanApply() => !IsBusy && _currentStep == WizardStep.PrepareAndConfigure && IsPreparedForSelectedGame();
 
     private bool IsPreparedForSelectedGame() =>
         SelectedGame?.Validation?.CanGeneratePatch == true &&
@@ -524,7 +528,25 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
     {
         BackCommand.NotifyCanExecuteChanged();
         NextCommand.NotifyCanExecuteChanged();
-        ApplyAndLaunchCommand.NotifyCanExecuteChanged();
+        PrepareAndOpenSetupCommand.NotifyCanExecuteChanged();
+    }
+
+    private void SetPreparationVerification(
+        bool? success,
+        int preparedFileCount,
+        int expectedFileCount,
+        bool alphaPreserved,
+        bool transparentPixelsPreserved,
+        bool repositoryMetadataPresent)
+    {
+        _preparationVerified = success;
+        _preparedFileCount = preparedFileCount;
+        _expectedFileCount = expectedFileCount;
+        _alphaPreserved = alphaPreserved;
+        _transparentPixelsPreserved = transparentPixelsPreserved;
+        _repositoryMetadataPresent = repositoryMetadataPresent;
+        OnPropertyChanged(nameof(VerificationHeadline));
+        OnPropertyChanged(nameof(VerificationDetails));
     }
 
     private static byte[] Encode(RgbaImage image)
@@ -544,8 +566,8 @@ public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
             nameof(ProtanDescription), nameof(DeutanDescription), nameof(TritanDescription), nameof(StrengthLabel),
             nameof(StrengthLowLabel), nameof(StrengthHighLabel), nameof(ExperimentalNotice), nameof(SelectedVisionTypeLabel),
             nameof(SelectedVisionTypeDescription), nameof(GameSummaryLabel), nameof(VisionSummaryLabel),
-            nameof(StrengthSummaryLabel), nameof(ConfigSummaryLabel), nameof(PendingConfigLabel), nameof(DisplayedConfigurationName),
-            nameof(VerificationHeadline), nameof(VerificationDetails)
+            nameof(StrengthSummaryLabel), nameof(ConfigSummaryLabel), nameof(PendingConfigLabel), nameof(DisplayedPatchSelectionName),
+            nameof(SetupInstructions), nameof(VerificationHeadline), nameof(VerificationDetails)
         })
         {
             OnPropertyChanged(property);
@@ -558,5 +580,5 @@ public enum WizardStep
     Game,
     VisionType,
     StrengthPreview,
-    ApplyAndVerify
+    PrepareAndConfigure
 }

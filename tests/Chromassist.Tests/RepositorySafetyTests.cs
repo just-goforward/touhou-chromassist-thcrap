@@ -22,6 +22,16 @@ public sealed class RepositorySafetyTests
         Assert.Empty(violations);
     }
 
+    [Fact]
+    public void StrengthSliderUpdatesContinuouslyAndJumpsToClickedPoint()
+    {
+        var xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Chromassist.App", "MainWindow.xaml"));
+
+        Assert.Contains("IsMoveToPointEnabled=\"True\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("UpdateSourceTrigger=PropertyChanged", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Delay=", xaml, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

@@ -1,6 +1,8 @@
 # Calibration and preset selection
 
-The simplified launcher MVP does not run a diagnostic or screening test. A user directly chooses a broad Protan, Deutan, or Tritan type with radio buttons, then adjusts an experimental 0–100% strength while comparing the original and adjusted local bullet texture in real time.
+The simplified launcher MVP does not run a diagnostic or screening test. A user directly chooses a broad internal Protan, Deutan, or Tritan category using localized user-facing terminology, then adjusts an experimental 0–100% strength while comparing the original and adjusted local bullet texture continuously during slider movement.
+
+User-facing terminology is intentionally broader than a diagnosis. Korean uses recognizable red-family, green-family, and blue-yellow-family color-vision-deficiency labels. Japanese follows the current `1型色覚`, `2型色覚`, and `3型色覚` convention described by the [Japanese Ophthalmological Society](https://www.nichigan.or.jp/public/disease/symptoms.html?catid=84). English uses Protan/Deutan red-green CVD and Tritan blue-yellow CVD, aligned with the category structure explained by the [US National Eye Institute](https://www.nei.nih.gov/eye-health-information/eye-conditions-and-diseases/color-blindness/types-color-vision-deficiency). The application does not distinguish anomaly from anopia and must not imply that it has diagnosed either.
 
 Before a future screening or manual-calibration flow begins, the UI must recommend:
 

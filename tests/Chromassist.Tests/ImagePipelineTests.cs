@@ -55,6 +55,16 @@ public sealed class ImagePipelineTests
     }
 
     [Fact]
+    public void PresetKeepsFractionalSliderStrength()
+    {
+        var preset = PresetCatalog.Create(Chromassist.Core.Models.PresetKind.Protan, 12.5);
+
+        Assert.Equal(12.5, preset.StrengthPercent);
+        Assert.Equal(7, preset.PrimaryHueShiftDegrees);
+        Assert.Equal(6.5, preset.SecondaryHueShiftDegrees);
+    }
+
+    [Fact]
     public void DecoderRejectsUnsupportedInput()
     {
         using var stream = new MemoryStream([1, 2, 3, 4, 5, 6, 7, 8]);

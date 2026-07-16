@@ -33,12 +33,10 @@ public interface IUpdateCheckService
     Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default);
 }
 
-public interface IGameLauncher
+public interface IThcrapSetupLauncher
 {
-    Task<GameLaunchResult> LaunchAsync(
+    Task<SetupLaunchResult> LaunchAsync(
         string thcrapDirectory,
-        string runConfigurationPath,
-        string gameId,
         CancellationToken cancellationToken = default);
 }
 
@@ -51,7 +49,7 @@ public interface IPatchApplicationVerifier
 
 public sealed record UpdateCheckResult(bool IsConfigured, bool IsUpdateAvailable, string Summary, Uri? ReleaseUri);
 
-public sealed record GameLaunchResult(int ProcessId, DateTimeOffset StartedAtUtc, string LoaderPath);
+public sealed record SetupLaunchResult(int ProcessId, DateTimeOffset StartedAtUtc, string ExecutablePath);
 
 public sealed record PatchVerificationRequest(
     string ThcrapDirectory,
